@@ -76,12 +76,14 @@ public class FileSystemsManager {
 
     /**
      * Loads the previously formatted file, returns {@link RootDirectory} to operate with files.
+     * It is not possible to load the same file twice as well as perform any another I/O operations with it
+     * before the obtained {@link RootDirectory} will be closed.
      *
      * @param path the path to the formatted file.
      *
      * @return {@link RootDirectory} to operate with files. Take a note that {@link RootDirectory} should be closed after using!
      *
-     * @throws IOException if some I/O error occurs.
+     * @throws IOException if the formatted file is already loaded or some another I/O error occurs.
      */
     public static RootDirectory load(Path path) throws IOException {
         Objects.requireNonNull(path, "path must be not null");
@@ -89,6 +91,7 @@ public class FileSystemsManager {
             throw new IllegalArgumentException("Cannot load not existing or not formatted file: " + path);
         }
         RandomAccessFile file = new RandomAccessFile(path.toFile(), "rw");
+        file.getChannel().lock(); // lock is released with file close
         return new RootDirectory(file, FILE_SYSTEM_ID.length);
     }
 

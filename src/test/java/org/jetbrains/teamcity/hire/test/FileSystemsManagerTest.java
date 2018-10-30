@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.jetbrains.teamcity.hire.test.filesystem.FileSystemsManager;
+import org.jetbrains.teamcity.hire.test.filesystem.RootDirectory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,6 +28,31 @@ public class FileSystemsManagerTest extends RootTest {
     public void testFileSystemFileFormat() throws IOException {
         FileSystemsManager.createAndFormat(fileSystemPath, 1000);
         Assertions.assertTrue(FileSystemsManager.isFormatted(fileSystemPath));
+    }
+
+    @SuppressWarnings({"EmptyTryBlock", "unused"})
+    @Test
+    @DisplayName("Try to load root directory of the same file sequentially")
+    public void testSequentialRootDirectoryLoad() throws IOException {
+        FileSystemsManager.createAndFormat(fileSystemPath, 1000);
+        try (RootDirectory directory = FileSystemsManager.load(fileSystemPath)) {
+        }
+        Assertions.assertDoesNotThrow(() -> {
+            try (RootDirectory theSameDirectory = FileSystemsManager.load(fileSystemPath)) {
+            }
+        });
+    }
+
+    @SuppressWarnings({"EmptyTryBlock", "unused"})
+    @Test
+    @DisplayName("Try to load root directory of the same file twice")
+    public void testDoubleRootDirectoryLoad() throws IOException {
+        try (RootDirectory directory = FileSystemsManager.load(fileSystemPath)) {
+            Assertions.assertThrows(IOException.class, () -> {
+                try (RootDirectory theSameDirectory = FileSystemsManager.load(fileSystemPath)) {
+                }
+            });
+        }
     }
 
 }
