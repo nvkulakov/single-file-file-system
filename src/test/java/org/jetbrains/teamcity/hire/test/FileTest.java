@@ -5,9 +5,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
-import org.jetbrains.teamcity.hire.test.filesystem.File;
-import org.jetbrains.teamcity.hire.test.filesystem.FileSystemsManager;
-import org.jetbrains.teamcity.hire.test.filesystem.RootDirectory;
+import org.jetbrains.teamcity.hire.test.filesystem.api.File;
+import org.jetbrains.teamcity.hire.test.filesystem.api.RootDirectory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,8 +16,8 @@ public class FileTest extends RootTest {
     @Test
     @DisplayName("Create a file, write simple content, read it")
     public void testWriteReadOneFile() throws IOException {
-        FileSystemsManager.createAndFormat(fileSystemPath, 1000);
-        try (RootDirectory directory = FileSystemsManager.load(fileSystemPath)) {
+        fileSystemsManager.createAndFormat(fileSystemPath, 1000);
+        try (RootDirectory directory = fileSystemsManager.load(fileSystemPath)) {
             String name = "First file";
             File file = directory.createFile(name, 10);
             byte[] writtenData = {22, -12, 1, 99, -128, 127, 63, 74, -14, -7};
@@ -32,8 +31,8 @@ public class FileTest extends RootTest {
     @Test
     @DisplayName("Create two files, write into them alternately random bytes, check content")
     public void testSequentialWriteIntoTwoFiles() throws IOException {
-        FileSystemsManager.createAndFormat(fileSystemPath, 200_000);
-        try (RootDirectory directory = FileSystemsManager.load(fileSystemPath)) {
+        fileSystemsManager.createAndFormat(fileSystemPath, 200_000);
+        try (RootDirectory directory = fileSystemsManager.load(fileSystemPath)) {
             byte writeCycles = 100;
             int maxBlockSize = 1000;
             String name1 = "First file";

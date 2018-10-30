@@ -1,4 +1,4 @@
-package org.jetbrains.teamcity.hire.test.filesystem;
+package org.jetbrains.teamcity.hire.test.filesystem.impl;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -7,16 +7,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Objects;
-import javax.annotation.concurrent.NotThreadSafe;
+import org.jetbrains.teamcity.hire.test.filesystem.api.FileSystemsManager;
+import org.jetbrains.teamcity.hire.test.filesystem.api.RootDirectory;
 
-/**
- * Manages file system in a file creation, format and loading {@link RootDirectory} from properly formatted file.
- */
-@NotThreadSafe
-public class FileSystemsManager {
+public class FileSystemsManagerImpl implements FileSystemsManager {
 
     private static final long MIN_DATA_SIZE = Integer.getInteger("minFileDataSize", 200);
-    private static final long MIN_FILE_SIZE = RootDirectory.DEFAULT_SIZE + MIN_DATA_SIZE;
+    private static final long MIN_FILE_SIZE = RootDirectoryImpl.DEFAULT_SIZE + MIN_DATA_SIZE;
     private static final byte[] FILE_SYSTEM_ID = "SingleFileFileSystem_v0.01".getBytes();
 
     /**
@@ -28,7 +25,8 @@ public class FileSystemsManager {
      *
      * @throws IOException if some I/O error occurs.
      */
-    public static void createAndFormat(Path path, long fileSize) throws IOException {
+    @Override
+    public void createAndFormat(Path path, long fileSize) throws IOException {
         Objects.requireNonNull(path, "path must be not null");
         if (Files.isDirectory(path)) {
             throw new IllegalArgumentException("path should not be a directory");
@@ -43,7 +41,7 @@ public class FileSystemsManager {
             file.write(FILE_SYSTEM_ID);
             new FreeBlock(file, FILE_SYSTEM_ID.length, file.length(), FILE_SYSTEM_ID.length)
                     .initialize(file.length() - FILE_SYSTEM_ID.length)
-                    .allocate(RootDirectory.DEFAULT_SIZE);
+                    .allocate(RootDirectoryImpl.DEFAULT_SIZE);
         }
     }
 
@@ -56,7 +54,8 @@ public class FileSystemsManager {
      *
      * @throws IOException if some I/O error occurs.
      */
-    public static boolean isFormatted(Path path) throws IOException {
+    @Override
+    public boolean isFormatted(Path path) throws IOException {
         Objects.requireNonNull(path, "path must be not null");
         if (!Files.exists(path) || Files.isDirectory(path) || Files.size(path) < MIN_FILE_SIZE) {
             return false;
@@ -85,14 +84,15 @@ public class FileSystemsManager {
      *
      * @throws IOException if the formatted file is already loaded or some another I/O error occurs.
      */
-    public static RootDirectory load(Path path) throws IOException {
+    @Override
+    public RootDirectory load(Path path) throws IOException {
         Objects.requireNonNull(path, "path must be not null");
         if (!isFormatted(path)) {
             throw new IllegalArgumentException("Cannot load not existing or not formatted file: " + path);
         }
         RandomAccessFile file = new RandomAccessFile(path.toFile(), "rw");
         file.getChannel().lock(); // lock is released with file close
-        return new RootDirectory(file, FILE_SYSTEM_ID.length);
+        return RootDirectoryImpl.load(file, FILE_SYSTEM_ID.length);
     }
 
 }

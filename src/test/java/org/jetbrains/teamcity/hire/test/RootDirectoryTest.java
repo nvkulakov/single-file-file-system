@@ -8,9 +8,8 @@ import java.util.List;
 import java.util.Random;
 import org.jetbrains.teamcity.hire.test.exceptions.IllegalFileNameException;
 import org.jetbrains.teamcity.hire.test.exceptions.NotEnoughFreeSpaceException;
-import org.jetbrains.teamcity.hire.test.filesystem.File;
-import org.jetbrains.teamcity.hire.test.filesystem.FileSystemsManager;
-import org.jetbrains.teamcity.hire.test.filesystem.RootDirectory;
+import org.jetbrains.teamcity.hire.test.filesystem.api.File;
+import org.jetbrains.teamcity.hire.test.filesystem.api.RootDirectory;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,8 +20,8 @@ public class RootDirectoryTest extends RootTest {
     @DisplayName("Create a file with size of all the free data space size")
     public void testMaxFileSizeCreating() throws IOException {
         int fileSystemFileSize = 1000;
-        FileSystemsManager.createAndFormat(fileSystemPath, fileSystemFileSize);
-        try (RootDirectory directory = FileSystemsManager.load(fileSystemPath)) {
+        fileSystemsManager.createAndFormat(fileSystemPath, fileSystemFileSize);
+        try (RootDirectory directory = fileSystemsManager.load(fileSystemPath)) {
             int rootStartPosition = 26;
             int serviceBytes = 25;
             int rootBlockLength = 800 + serviceBytes;
@@ -35,8 +34,8 @@ public class RootDirectoryTest extends RootTest {
     @DisplayName("Create too big file")
     public void testNotEnoughFreeSpace() throws IOException {
         int fileSystemFileSize = 1000;
-        FileSystemsManager.createAndFormat(fileSystemPath, fileSystemFileSize);
-        try (RootDirectory directory = FileSystemsManager.load(fileSystemPath)) {
+        fileSystemsManager.createAndFormat(fileSystemPath, fileSystemFileSize);
+        try (RootDirectory directory = fileSystemsManager.load(fileSystemPath)) {
             int rootStartPosition = 26;
             int serviceBytes = 25;
             int rootBlockLength = 800 + serviceBytes;
@@ -48,8 +47,8 @@ public class RootDirectoryTest extends RootTest {
     @Test
     @DisplayName("Create a few files in the root directory, compare read file names with the written ones")
     public void testGetFileNames() throws IOException {
-        FileSystemsManager.createAndFormat(fileSystemPath, 1000);
-        try (RootDirectory directory = FileSystemsManager.load(fileSystemPath)) {
+        fileSystemsManager.createAndFormat(fileSystemPath, 1000);
+        try (RootDirectory directory = fileSystemsManager.load(fileSystemPath)) {
             String name0 = "AAAbbbCCCddd 1";
             String name1 = "eeeFFFgggHHH_2";
             String name2 = "JjjKkkLllMmm _ 131";
@@ -67,8 +66,8 @@ public class RootDirectoryTest extends RootTest {
     @Test
     @DisplayName("Create several files in the root directory, remove some of them")
     public void testRemoveFiles() throws IOException {
-        FileSystemsManager.createAndFormat(fileSystemPath, 1000);
-        try (RootDirectory directory = FileSystemsManager.load(fileSystemPath)) {
+        fileSystemsManager.createAndFormat(fileSystemPath, 1000);
+        try (RootDirectory directory = fileSystemsManager.load(fileSystemPath)) {
             String name0 = "AAAbbbCCCddd 1";
             String name1 = "eeeFFFgggHHH_2";
             String name2 = "JjjKkkLllMmm _ 131";
@@ -86,8 +85,8 @@ public class RootDirectoryTest extends RootTest {
     @Test
     @DisplayName("Create second file with name of first")
     public void testFileNamesCorrectness() throws IOException {
-        FileSystemsManager.createAndFormat(fileSystemPath, 1000);
-        try (RootDirectory directory = FileSystemsManager.load(fileSystemPath)) {
+        fileSystemsManager.createAndFormat(fileSystemPath, 1000);
+        try (RootDirectory directory = fileSystemsManager.load(fileSystemPath)) {
             String validName = "Correct file_name 1";
             Assertions.assertDoesNotThrow(() -> directory.createFile(validName, 0));
             String invalidName1 = "Very very long file name, it cannot be so big";
@@ -106,8 +105,8 @@ public class RootDirectoryTest extends RootTest {
     @Test
     @DisplayName("Create second file with name of first")
     public void testFileNameDuplication() throws IOException {
-        FileSystemsManager.createAndFormat(fileSystemPath, 1000);
-        try (RootDirectory directory = FileSystemsManager.load(fileSystemPath)) {
+        fileSystemsManager.createAndFormat(fileSystemPath, 1000);
+        try (RootDirectory directory = fileSystemsManager.load(fileSystemPath)) {
             String name = "AAA_bbb CCC 111_ddd 97";
             directory.createFile(name, 0);
             Assertions.assertThrows(IllegalFileNameException.class, () -> directory.createFile(name, 0));
@@ -117,8 +116,8 @@ public class RootDirectoryTest extends RootTest {
     @Test
     @DisplayName("Create a lot of files in the root directory, compare gotten names with written")
     public void testRootDirectoryGrowing() throws IOException {
-        FileSystemsManager.createAndFormat(fileSystemPath, 100_000);
-        try (RootDirectory directory = FileSystemsManager.load(fileSystemPath)) {
+        fileSystemsManager.createAndFormat(fileSystemPath, 100_000);
+        try (RootDirectory directory = fileSystemsManager.load(fileSystemPath)) {
             int filesCount = 1000;
             List<String> names = new ArrayList<>(filesCount);
             for (int i = 0; i < filesCount; i++) {
@@ -133,8 +132,8 @@ public class RootDirectoryTest extends RootTest {
     @Test
     @DisplayName("Create/remove files with equal size, check their content")
     public void testWriteReadRemoveSimpleDataFile() throws IOException {
-        FileSystemsManager.createAndFormat(fileSystemPath, 30_000);
-        try (RootDirectory directory = FileSystemsManager.load(fileSystemPath)) {
+        fileSystemsManager.createAndFormat(fileSystemPath, 30_000);
+        try (RootDirectory directory = fileSystemsManager.load(fileSystemPath)) {
             int dataSize = 200;
             int maxFiles = 100;
             Random random = new Random(0);
@@ -172,8 +171,8 @@ public class RootDirectoryTest extends RootTest {
     @Test
     @DisplayName("Create/remove files with different size and random content, check their content")
     public void testWriteReadRemoveVariousData() throws IOException {
-        FileSystemsManager.createAndFormat(fileSystemPath, 1_000_000);
-        try (RootDirectory directory = FileSystemsManager.load(fileSystemPath)) {
+        fileSystemsManager.createAndFormat(fileSystemPath, 1_000_000);
+        try (RootDirectory directory = fileSystemsManager.load(fileSystemPath)) {
             int maxFiles = 100;
             int maxBlockSize = 1000;
             List<NameAndData> nameAndDataList = new LinkedList<>();

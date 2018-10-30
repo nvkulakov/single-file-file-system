@@ -1,4 +1,4 @@
-package org.jetbrains.teamcity.hire.test.filesystem;
+package org.jetbrains.teamcity.hire.test.filesystem.impl;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;

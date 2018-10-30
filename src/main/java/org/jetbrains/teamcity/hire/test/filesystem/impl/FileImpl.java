@@ -1,20 +1,21 @@
-package org.jetbrains.teamcity.hire.test.filesystem;
+package org.jetbrains.teamcity.hire.test.filesystem.impl;
 
 import java.io.IOException;
 import java.util.Objects;
 import javax.annotation.concurrent.NotThreadSafe;
 import org.jetbrains.teamcity.hire.test.exceptions.NotEnoughFreeSpaceException;
+import org.jetbrains.teamcity.hire.test.filesystem.api.File;
 
 /**
  * File abstraction providing read/write data.
  */
 @NotThreadSafe
-public class File {
+class FileImpl implements File {
 
     private final DataBlock dataBlock;
     private final String name;
 
-    File(DataBlock dataBlock, String name) {
+    FileImpl(DataBlock dataBlock, String name) {
         this.dataBlock = Objects.requireNonNull(dataBlock, "dataBlock must be not null");
         this.name = Objects.requireNonNull(name, "name must be not null");
     }
@@ -24,6 +25,7 @@ public class File {
      *
      * @return the name of the file.
      */
+    @Override
     public String getName() {
         return name;
     }
@@ -35,6 +37,7 @@ public class File {
      *
      * @throws IOException if some I/O error occurs.
      */
+    @Override
     public long getFileSize() throws IOException {
         return dataBlock.getDataChainCapacity();
     }
@@ -48,6 +51,7 @@ public class File {
      *
      * @throws IOException if some I/O error occurs.
      */
+    @Override
     public void read(byte[] destination) throws IOException {
         read(0, destination);
     }
@@ -62,6 +66,7 @@ public class File {
      *
      * @throws IOException if some I/O error occurs.
      */
+    @Override
     public void read(int offset, byte[] destination) throws IOException {
         if (offset < 0) {
             throw new IllegalArgumentException("offset must be >= 0");
@@ -79,6 +84,7 @@ public class File {
      * @throws IOException                 if some I/O error occurs.
      * @throws NotEnoughFreeSpaceException if the file cannot be extended due to enough free space absence.
      */
+    @Override
     public void write(byte[] data) throws IOException, NotEnoughFreeSpaceException {
         write(0, data);
     }
@@ -92,6 +98,7 @@ public class File {
      * @throws IOException                 if some I/O error occurs.
      * @throws NotEnoughFreeSpaceException if the file cannot be extended due to enough free space absence.
      */
+    @Override
     public void write(int offset, byte[] data) throws IOException, NotEnoughFreeSpaceException {
         if (offset < 0) {
             throw new IllegalArgumentException("offset must be >= 0");
