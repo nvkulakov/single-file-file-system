@@ -42,8 +42,8 @@ public class FileSystemsManager {
             file.setLength(fileSize);
             file.write(FILE_SYSTEM_ID);
             new FreeBlock(file, FILE_SYSTEM_ID.length, file.length(), FILE_SYSTEM_ID.length)
-                    .initialize(file.length() - FILE_SYSTEM_ID.length);
-            RootDirectory.create(file, FILE_SYSTEM_ID.length);
+                    .initialize(file.length() - FILE_SYSTEM_ID.length)
+                    .allocate(RootDirectory.DEFAULT_SIZE);
         }
     }
 

@@ -54,19 +54,6 @@ public class RootDirectory implements Closeable {
         rootBlock = new DataBlock(file, firstPosition, file.length(), firstPosition);
     }
 
-    static void create(RandomAccessFile file, long firstPosition) throws IOException, NotEnoughFreeSpaceException {
-        Objects.requireNonNull(file, "file must be not null");
-        if (firstPosition < 0 || firstPosition >= file.length()) {
-            throw new IllegalArgumentException(
-                    String.format("firstPosition value '%s' is out of bounds for file %s", firstPosition, file));
-        }
-        Block firstBlock = new Block(file, firstPosition, file.length(), firstPosition);
-        if (!firstBlock.isFree()) {
-            throw new IllegalStateException("Cannot create root directory: the first block is not free");
-        }
-        new FreeBlock(firstBlock).allocate(DEFAULT_SIZE);
-    }
-
     /**
      * Creates a file with the provided {@code name} at least {@code size} bytes size.
      *
