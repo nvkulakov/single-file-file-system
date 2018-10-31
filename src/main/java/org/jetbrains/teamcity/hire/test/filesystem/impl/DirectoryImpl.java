@@ -49,6 +49,11 @@ class DirectoryImpl implements Directory {
     }
 
     @Override
+    public String getName() {
+        return name;
+    }
+
+    @Override
     public File createFile(String fileName, int size)
             throws IOException, IllegalFileNameException, NotEnoughFreeSpaceException, TooManyFilesException {
         Objects.requireNonNull(fileName, "fileName must be not null");
@@ -87,7 +92,7 @@ class DirectoryImpl implements Directory {
             DataBlock directoryContentBlock = contentBlock.findFirstFreeBlock()
                     .allocate(Math.max(DEFAULT_SIZE, Block.MIN_DATA_CAPACITY));
             addFileRecord(directoryName, directoryContentBlock, filesCount);
-            return new DirectoryImpl(name, directoryContentBlock);
+            return new DirectoryImpl(directoryName, directoryContentBlock);
         }
     }
 
@@ -126,14 +131,14 @@ class DirectoryImpl implements Directory {
 
     @Nullable
     @Override
-    public File getFile(String name) throws IOException {
-        Objects.requireNonNull(name, "File name must be not null");
-        if (isDirectoryName(name)) {
+    public File getFile(String fileName) throws IOException {
+        Objects.requireNonNull(fileName, "fileName must be not null");
+        if (isDirectoryName(fileName)) {
             return null;
         }
         synchronized (RootDirectory.class) {
             for (FileRecord record : loadFileRecords()) {
-                if (!record.isEmpty() && record.getName().equals(name)) {
+                if (!record.isEmpty() && record.getName().equals(fileName)) {
                     return record.toFile();
                 }
             }
@@ -143,14 +148,14 @@ class DirectoryImpl implements Directory {
 
     @Nullable
     @Override
-    public Directory getDirectory(String name) throws IOException {
-        Objects.requireNonNull(name, "Directory name must be not null");
-        if (!isDirectoryName(name)) {
+    public Directory getDirectory(String directoryName) throws IOException {
+        Objects.requireNonNull(directoryName, "directoryName must be not null");
+        if (!isDirectoryName(directoryName)) {
             return null;
         }
         synchronized (RootDirectory.class) {
             for (FileRecord record : loadFileRecords()) {
-                if (!record.isEmpty() && record.getName().equals(name)) {
+                if (!record.isEmpty() && record.getName().equals(directoryName)) {
                     return record.toDirectory();
                 }
             }
@@ -159,12 +164,12 @@ class DirectoryImpl implements Directory {
     }
 
     @Override
-    public void removeFile(String name) throws IOException, NotEmptyDirectoryException {
-        Objects.requireNonNull(name, "name must be not null");
+    public void removeFile(String fileName) throws IOException, NotEmptyDirectoryException {
+        Objects.requireNonNull(fileName, "fileName must be not null");
         synchronized (RootDirectory.class) {
             for (FileRecord record : loadFileRecords()) {
-                if (!record.isEmpty() && record.getName().equals(name)) {
-                    if (isDirectoryName(name) && !record.toDirectory().isEmpty()) {
+                if (!record.isEmpty() && record.getName().equals(fileName)) {
+                    if (isDirectoryName(fileName) && !record.toDirectory().isEmpty()) {
                         throw new NotEmptyDirectoryException();
                     }
                     record.getDataBlock().removeChain();
@@ -206,13 +211,13 @@ class DirectoryImpl implements Directory {
         }
     }
 
-    private void addFileRecord(String name, Block dataBlock, int filesCount) throws IOException, NotEnoughFreeSpaceException {
-        byte[] nameBytes = name.getBytes(StandardCharsets.US_ASCII);
+    private void addFileRecord(String fileName, Block dataBlock, int filesCount) throws IOException, NotEnoughFreeSpaceException {
+        byte[] nameBytes = fileName.getBytes(StandardCharsets.US_ASCII);
         if (nameBytes.length > FILE_NAME_SIZE) {
             // bytes array length can be greater than string length
             throw new IllegalArgumentException(
                     String.format("Name string cannot be more than %s bytes but it is! String: %s, bytes: %s",
-                            FILE_NAME_SIZE, name, Arrays.toString(nameBytes)));
+                            FILE_NAME_SIZE, fileName, Arrays.toString(nameBytes)));
         }
         int recordsCapacity = getFileRecordsCapacity();
         if (recordsCapacity == filesCount) {
@@ -237,9 +242,9 @@ class DirectoryImpl implements Directory {
         throw new IllegalStateException("No empty records found in root directory.");
     }
 
-    private boolean fileNameExists(String name) throws IOException {
+    private boolean fileNameExists(String fileName) throws IOException {
         for (FileRecord record : loadFileRecords()) {
-            if (!record.isEmpty() && record.getName().equals(name)) {
+            if (!record.isEmpty() && record.getName().equals(fileName)) {
                 return true;
             }
         }

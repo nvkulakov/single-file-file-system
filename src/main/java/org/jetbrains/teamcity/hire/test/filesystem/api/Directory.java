@@ -11,6 +11,13 @@ import org.jetbrains.teamcity.hire.test.filesystem.exceptions.TooManyFilesExcept
 public interface Directory {
 
     /**
+     * The name of the directory.
+     *
+     * @return the name of the directory starting with slash.
+     */
+    String getName();
+
+    /**
      * Creates a file with the provided {@code name} at least {@code size} bytes size.
      *
      * @param name the name of the file. Cannot be longer than 42 symbols by default.

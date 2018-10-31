@@ -14,13 +14,10 @@ import org.junit.jupiter.api.Test;
 
 public class NestedDirectoriesTest extends RootTest {
 
-    private Map<String, List<String>> directoryName2content;
-
     @Test
     @DisplayName("Try to remove empty / not empty directory")
     public void testRemoveDirectory() throws IOException {
-        fileSystemsManager.createAndFormat(fileSystemPath, 1000_000);
-        directoryName2content = new HashMap<>();
+        fileSystemsManager.createAndFormat(fileSystemPath, 3000);
         try (RootDirectory root = fileSystemsManager.load(fileSystemPath)) {
             Directory nestedDir = root.createDirectory("/nested");
             nestedDir.createDirectory("/subdir");
@@ -41,17 +38,18 @@ public class NestedDirectoriesTest extends RootTest {
     @Test
     @DisplayName("Create nested files and directories, compare written names with read")
     public void testNestedDirectoriesCreating() throws IOException {
-        fileSystemsManager.createAndFormat(fileSystemPath, 1000_000);
-        directoryName2content = new HashMap<>();
+        fileSystemsManager.createAndFormat(fileSystemPath, 200_000);
+        Map<String, List<String>> dirName2content = new HashMap<>();
         try (RootDirectory root = fileSystemsManager.load(fileSystemPath)) {
-            createNestedFilesAndDirs(root, "root", 3, 4);
-            compare(root, "root");
+            createNestedFilesAndDirs(root, 3, 4, dirName2content);
+            compare(root, dirName2content);
         }
     }
 
-    private void createNestedFilesAndDirs(Directory parent, String parentName, int filesAndDirs, int depth) throws IOException {
+    private void createNestedFilesAndDirs(Directory parent, int filesAndDirs, int depth, Map<String, List<String>> dirName2content)
+            throws IOException {
         List<String> names = new ArrayList<>(filesAndDirs * 2);
-        directoryName2content.put(parentName, names);
+        dirName2content.put(parent.getName(), names);
         if (depth == 0) {
             return;
         }
@@ -63,17 +61,17 @@ public class NestedDirectoriesTest extends RootTest {
             String directoryName = "/Directory depth " + depth + " num " + i;
             Directory directory = parent.createDirectory(directoryName);
             names.add(directoryName);
-            createNestedFilesAndDirs(directory, directoryName, filesAndDirs, depth - 1);
+            createNestedFilesAndDirs(directory, filesAndDirs, depth - 1, dirName2content);
         }
     }
 
     @SuppressWarnings("ConstantConditions")
-    private void compare(Directory directory, String directoryName) throws IOException {
+    private void compare(Directory directory, Map<String, List<String>> dirName2content) throws IOException {
         List<String> readNames = directory.getFileNames();
-        Assertions.assertEquals(readNames, directoryName2content.get(directoryName));
+        Assertions.assertEquals(readNames, dirName2content.get(directory.getName()));
         for (String name : readNames) {
             if (name.charAt(0) == '/') {
-                compare(directory.getDirectory(name), name);
+                compare(directory.getDirectory(name), dirName2content);
             }
         }
     }
