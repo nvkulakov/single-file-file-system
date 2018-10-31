@@ -37,12 +37,12 @@ class DirectoryImpl implements Directory {
     private final DataBlock contentBlock;
 
     /**
-     * @param name         the directory name without leading slash
+     * @param name         the directory name, should start with leading slash
      * @param contentBlock the directory content block
      */
     DirectoryImpl(String name, DataBlock contentBlock) {
         this.name = Objects.requireNonNull(name, "name must be not null");
-        if (name.isEmpty() || name.charAt(0) == '/') {
+        if (!isDirectoryName(name)) {
             throw new IllegalArgumentException("Unexpected directory name: " + name);
         }
         this.contentBlock = Objects.requireNonNull(contentBlock, "contentBlock must be not null");
@@ -72,10 +72,12 @@ class DirectoryImpl implements Directory {
     public Directory createDirectory(String directoryName)
             throws IOException, IllegalFileNameException, NotEnoughFreeSpaceException, TooManyFilesException {
         Objects.requireNonNull(directoryName, "directoryName must be not null");
+        if (!isDirectoryName(directoryName)) {
+            throw new IllegalFileNameException("Directory name should start with slash!");
+        }
         synchronized (RootDirectory.class) {
-            checkFileNameCorrectness(directoryName, FILE_NAME_SIZE - 1);
-            String fullName = '/' + directoryName;
-            if (fileNameExists(fullName)) {
+            checkFileNameCorrectness(directoryName.substring(1), FILE_NAME_SIZE - 1);
+            if (fileNameExists(directoryName)) {
                 throw new IllegalFileNameException("A directory with such name is already presented!");
             }
             int filesCount = getFilesCount();
@@ -84,7 +86,7 @@ class DirectoryImpl implements Directory {
             }
             DataBlock directoryContentBlock = contentBlock.findFirstFreeBlock()
                     .allocate(Math.max(DEFAULT_SIZE, Block.MIN_DATA_CAPACITY));
-            addFileRecord(fullName, directoryContentBlock, filesCount);
+            addFileRecord(directoryName, directoryContentBlock, filesCount);
             return new DirectoryImpl(name, directoryContentBlock);
         }
     }
@@ -330,8 +332,7 @@ class DirectoryImpl implements Directory {
         }
 
         Directory toDirectory() {
-            String name = getName().substring(1); // remove leading slash
-            return new DirectoryImpl(name, getDataBlock());
+            return new DirectoryImpl(getName(), getDataBlock());
         }
 
         // The record is empty if and only if all the position bytes are zeros

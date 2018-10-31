@@ -7,7 +7,7 @@ import org.jetbrains.teamcity.hire.test.filesystem.api.RootDirectory;
 
 class RootDirectoryImpl extends DirectoryImpl implements RootDirectory {
 
-    private static final String ROOT_DIRECTORY_NAME = "root";
+    private static final String ROOT_DIRECTORY_NAME = "/root";
 
     private final RandomAccessFile file;
 

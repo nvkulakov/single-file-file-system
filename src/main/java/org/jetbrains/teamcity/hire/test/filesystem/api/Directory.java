@@ -31,9 +31,8 @@ public interface Directory {
     /**
      * Creates a directory with the provided {@code name}.
      *
-     * @param name the name of the directory. Cannot be longer than 41 symbols by default
-     *             (one symbol is reserved to leading slash that marks directory).
-     *             Should contain only letters, digits, underscore and space, cannot start or end with space.
+     * @param name the name of the directory. Should start with slash, cannot be longer than 42 symbols by default.
+     *             Should contain only letters, digits, underscore and space, cannot start (after leading slash) or end with space.
      *
      * @return created directory.
      *
