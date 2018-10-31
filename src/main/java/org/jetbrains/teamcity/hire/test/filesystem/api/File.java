@@ -1,7 +1,7 @@
 package org.jetbrains.teamcity.hire.test.filesystem.api;
 
 import java.io.IOException;
-import org.jetbrains.teamcity.hire.test.exceptions.NotEnoughFreeSpaceException;
+import org.jetbrains.teamcity.hire.test.filesystem.exceptions.NotEnoughFreeSpaceException;
 
 public interface File {
 

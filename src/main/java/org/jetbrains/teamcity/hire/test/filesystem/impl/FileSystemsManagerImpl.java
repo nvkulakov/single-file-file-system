@@ -26,7 +26,7 @@ public class FileSystemsManagerImpl implements FileSystemsManager {
      * @throws IOException if some I/O error occurs.
      */
     @Override
-    public void createAndFormat(Path path, long fileSize) throws IOException {
+    public synchronized void createAndFormat(Path path, long fileSize) throws IOException {
         Objects.requireNonNull(path, "path must be not null");
         if (Files.isDirectory(path)) {
             throw new IllegalArgumentException("path should not be a directory");
@@ -55,7 +55,7 @@ public class FileSystemsManagerImpl implements FileSystemsManager {
      * @throws IOException if some I/O error occurs.
      */
     @Override
-    public boolean isFormatted(Path path) throws IOException {
+    public synchronized boolean isFormatted(Path path) throws IOException {
         Objects.requireNonNull(path, "path must be not null");
         if (!Files.exists(path) || Files.isDirectory(path) || Files.size(path) < MIN_FILE_SIZE) {
             return false;
@@ -85,13 +85,13 @@ public class FileSystemsManagerImpl implements FileSystemsManager {
      * @throws IOException if the formatted file is already loaded or some another I/O error occurs.
      */
     @Override
-    public RootDirectory load(Path path) throws IOException {
+    public synchronized RootDirectory load(Path path) throws IOException {
         Objects.requireNonNull(path, "path must be not null");
         if (!isFormatted(path)) {
             throw new IllegalArgumentException("Cannot load not existing or not formatted file: " + path);
         }
         RandomAccessFile file = new RandomAccessFile(path.toFile(), "rw");
-        file.getChannel().lock(); // lock is released with file close
+        file.getChannel().lock(); // lock is released with root directory close
         return RootDirectoryImpl.load(file, FILE_SYSTEM_ID.length);
     }
 

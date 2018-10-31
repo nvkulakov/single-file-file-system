@@ -5,7 +5,7 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 import java.util.Optional;
-import org.jetbrains.teamcity.hire.test.exceptions.NotEnoughFreeSpaceException;
+import org.jetbrains.teamcity.hire.test.filesystem.exceptions.NotEnoughFreeSpaceException;
 
 class DataBlock extends Block {
 

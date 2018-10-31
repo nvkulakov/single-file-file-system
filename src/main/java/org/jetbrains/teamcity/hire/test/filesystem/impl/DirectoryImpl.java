@@ -10,12 +10,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import javax.annotation.Nullable;
-import org.jetbrains.teamcity.hire.test.exceptions.IllegalFileNameException;
-import org.jetbrains.teamcity.hire.test.exceptions.NotEmptyDirectoryException;
-import org.jetbrains.teamcity.hire.test.exceptions.NotEnoughFreeSpaceException;
-import org.jetbrains.teamcity.hire.test.exceptions.TooManyFilesException;
 import org.jetbrains.teamcity.hire.test.filesystem.api.Directory;
 import org.jetbrains.teamcity.hire.test.filesystem.api.File;
+import org.jetbrains.teamcity.hire.test.filesystem.api.RootDirectory;
+import org.jetbrains.teamcity.hire.test.filesystem.exceptions.IllegalFileNameException;
+import org.jetbrains.teamcity.hire.test.filesystem.exceptions.NotEmptyDirectoryException;
+import org.jetbrains.teamcity.hire.test.filesystem.exceptions.NotEnoughFreeSpaceException;
+import org.jetbrains.teamcity.hire.test.filesystem.exceptions.TooManyFilesException;
 
 import static org.jetbrains.teamcity.hire.test.filesystem.impl.Block.MAX_BYTE_ARRAY_SIZE;
 import static org.jetbrains.teamcity.hire.test.filesystem.impl.Block.POSITION_BYTES;
@@ -27,73 +28,98 @@ class DirectoryImpl implements Directory {
     private static final int INITIAL_FILES_CAPACITY = Integer.getInteger("initialRootDirectoryCapacity", 16);
     static final int DEFAULT_SIZE = INITIAL_FILES_CAPACITY * FILE_RECORD_SIZE;
     private static final int MAX_FILES_IN_DIR = Math.min(
-            Integer.getInteger("maxFilesInRootDirectory", 2048),
+            Integer.getInteger("maxFilesInDirectory", 2048),
             MAX_BYTE_ARRAY_SIZE / FILE_RECORD_SIZE); // allow to load all records in one byte array
 
     private static final CharsetEncoder US_ASCII_ENCODER = StandardCharsets.US_ASCII.newEncoder();
 
+    private final String name;
     private final DataBlock contentBlock;
 
-    DirectoryImpl(DataBlock contentBlock) {
+    /**
+     * @param name         the directory name without leading slash
+     * @param contentBlock the directory content block
+     */
+    DirectoryImpl(String name, DataBlock contentBlock) {
+        this.name = Objects.requireNonNull(name, "name must be not null");
+        if (name.isEmpty() || name.charAt(0) == '/') {
+            throw new IllegalArgumentException("Unexpected directory name: " + name);
+        }
         this.contentBlock = Objects.requireNonNull(contentBlock, "contentBlock must be not null");
     }
 
     @Override
-    public File createFile(String name, int size)
+    public File createFile(String fileName, int size)
             throws IOException, IllegalFileNameException, NotEnoughFreeSpaceException, TooManyFilesException {
-        Objects.requireNonNull(name, "File name must be not null");
+        Objects.requireNonNull(fileName, "fileName must be not null");
         if (size < 0) {
             throw new IllegalArgumentException("File size cannot be negative");
         }
-        checkNameCorrectness(name, FILE_NAME_SIZE);
-        int filesCount = getFilesCount();
-        if (filesCount >= MAX_FILES_IN_DIR) {
-            throw new TooManyFilesException(MAX_FILES_IN_DIR);
+        synchronized (RootDirectory.class) {
+            checkFileNameCorrectness(fileName, FILE_NAME_SIZE);
+            int filesCount = getFilesCount();
+            if (filesCount >= MAX_FILES_IN_DIR) {
+                throw new TooManyFilesException(name, MAX_FILES_IN_DIR);
+            }
+            DataBlock fileDataBlock = contentBlock.findFirstFreeBlock()
+                    .allocate(Math.max(size, Block.MIN_DATA_CAPACITY));
+            addFileRecord(fileName, fileDataBlock, filesCount);
+            return new FileImpl(fileDataBlock, fileName);
         }
-        DataBlock fileDataBlock = contentBlock.findFirstFreeBlock().allocate(Math.max(size, Block.MIN_DATA_CAPACITY));
-        addFileRecord(name, fileDataBlock, filesCount);
-        return new FileImpl(fileDataBlock, name);
     }
 
     @Override
-    public Directory createDirectory(String name)
+    public Directory createDirectory(String directoryName)
             throws IOException, IllegalFileNameException, NotEnoughFreeSpaceException, TooManyFilesException {
-        Objects.requireNonNull(name, "Directory name must be not null");
-        checkNameCorrectness(name, FILE_NAME_SIZE - 1);
-        int filesCount = getFilesCount();
-        if (filesCount >= MAX_FILES_IN_DIR) {
-            throw new TooManyFilesException(MAX_FILES_IN_DIR);
+        Objects.requireNonNull(directoryName, "directoryName must be not null");
+        synchronized (RootDirectory.class) {
+            checkFileNameCorrectness(directoryName, FILE_NAME_SIZE - 1);
+            String fullName = '/' + directoryName;
+            if (fileNameExists(fullName)) {
+                throw new IllegalFileNameException("A directory with such name is already presented!");
+            }
+            int filesCount = getFilesCount();
+            if (filesCount >= MAX_FILES_IN_DIR) {
+                throw new TooManyFilesException(name, MAX_FILES_IN_DIR);
+            }
+            DataBlock directoryContentBlock = contentBlock.findFirstFreeBlock()
+                    .allocate(Math.max(DEFAULT_SIZE, Block.MIN_DATA_CAPACITY));
+            addFileRecord(fullName, directoryContentBlock, filesCount);
+            return new DirectoryImpl(name, directoryContentBlock);
         }
-        DataBlock directoryContentBlock = contentBlock.findFirstFreeBlock().allocate(Math.max(DEFAULT_SIZE, Block.MIN_DATA_CAPACITY));
-        addFileRecord('/' + name, directoryContentBlock, filesCount);
-        return new DirectoryImpl(directoryContentBlock);
     }
 
     @Override
     public int getFilesCount() throws IOException {
-        int filesCount = 0;
-        for (FileRecord fileRecord : loadFileRecords()) {
-            if (!fileRecord.isEmpty()) {
-                filesCount++;
+        synchronized (RootDirectory.class) {
+            int filesCount = 0;
+            for (FileRecord fileRecord : loadFileRecords()) {
+                if (!fileRecord.isEmpty()) {
+                    filesCount++;
+                }
             }
+            return filesCount;
         }
-        return filesCount;
     }
 
     @Override
     public boolean isEmpty() throws IOException {
-        return getFilesCount() == 0;
+        synchronized (RootDirectory.class) {
+            return getFilesCount() == 0;
+        }
     }
 
     @Override
     public List<String> getFileNames() throws IOException {
-        List<String> fileNames = new ArrayList<>();
-        for (FileRecord record : loadFileRecords()) {
-            if (!record.isEmpty()) {
-                fileNames.add(record.getName());
+        synchronized (RootDirectory.class) {
+            List<String> fileNames = new ArrayList<>();
+            for (FileRecord record : loadFileRecords()) {
+                if (!record.isEmpty()) {
+                    fileNames.add(record.getName());
+                }
             }
+            return fileNames;
         }
-        return fileNames;
     }
 
     @Nullable
@@ -103,12 +129,14 @@ class DirectoryImpl implements Directory {
         if (isDirectoryName(name)) {
             return null;
         }
-        for (FileRecord record : loadFileRecords()) {
-            if (!record.isEmpty() && record.getName().equals(name)) {
-                return record.toFile();
+        synchronized (RootDirectory.class) {
+            for (FileRecord record : loadFileRecords()) {
+                if (!record.isEmpty() && record.getName().equals(name)) {
+                    return record.toFile();
+                }
             }
+            return null;
         }
-        return null;
     }
 
     @Nullable
@@ -118,26 +146,30 @@ class DirectoryImpl implements Directory {
         if (!isDirectoryName(name)) {
             return null;
         }
-        for (FileRecord record : loadFileRecords()) {
-            if (!record.isEmpty() && record.getName().equals(name)) {
-                return record.toDirectory();
+        synchronized (RootDirectory.class) {
+            for (FileRecord record : loadFileRecords()) {
+                if (!record.isEmpty() && record.getName().equals(name)) {
+                    return record.toDirectory();
+                }
             }
+            return null;
         }
-        return null;
     }
 
     @Override
     public void removeFile(String name) throws IOException, NotEmptyDirectoryException {
         Objects.requireNonNull(name, "name must be not null");
-        for (FileRecord record : loadFileRecords()) {
-            if (!record.isEmpty() && record.getName().equals(name)) {
-                if (isDirectoryName(name) && !record.toDirectory().isEmpty()) {
-                    throw new NotEmptyDirectoryException();
+        synchronized (RootDirectory.class) {
+            for (FileRecord record : loadFileRecords()) {
+                if (!record.isEmpty() && record.getName().equals(name)) {
+                    if (isDirectoryName(name) && !record.toDirectory().isEmpty()) {
+                        throw new NotEmptyDirectoryException();
+                    }
+                    record.getDataBlock().removeChain();
+                    // zero position bytes mean empty record
+                    contentBlock.write(record.getIndex() * FILE_RECORD_SIZE, new byte[POSITION_BYTES]);
+                    return;
                 }
-                record.getDataBlock().removeChain();
-                // zero position bytes mean empty record
-                contentBlock.write(record.getIndex() * FILE_RECORD_SIZE, new byte[POSITION_BYTES]);
-                return;
             }
         }
     }
@@ -146,9 +178,9 @@ class DirectoryImpl implements Directory {
         return !name.isEmpty() && name.charAt(0) == '/';
     }
 
-    private void checkNameCorrectness(String name, int maxNameLength) throws IOException, IllegalFileNameException {
+    private void checkFileNameCorrectness(String name, int maxNameLength) throws IOException, IllegalFileNameException {
         if (name.isEmpty()) {
-            throw new IllegalFileNameException("File name cannot be empty!");
+            throw new IllegalFileNameException("Name cannot be empty!");
         }
         if (!US_ASCII_ENCODER.canEncode(name)) {
             throw new IllegalFileNameException(String.format("The name '%s' contains symbols not in US_ASCII charset!", name));
@@ -156,16 +188,16 @@ class DirectoryImpl implements Directory {
         char[] chars = name.toCharArray();
         if (chars.length > maxNameLength) {
             throw new IllegalFileNameException(
-                    String.format("File name length cannot be > %d, but the name length is %d", maxNameLength, chars.length));
+                    String.format("Name length cannot be > %d, but the name length is %d", maxNameLength, chars.length));
         }
         for (char c : chars) {
             if (!(Character.isLetterOrDigit(c) || c == '_' || c == ' ')) {
                 throw new IllegalFileNameException(
-                        String.format("File name should contain only letters, digits, underscore and space, but contains: '%c'", c));
+                        String.format("Name should contain only letters, digits, underscore and space, but contains: '%c'", c));
             }
         }
         if (chars[0] == ' ' || chars[chars.length - 1] == ' ') {
-            throw new IllegalFileNameException("File name cannot begin or end with space!");
+            throw new IllegalFileNameException("Name cannot begin or end with space!");
         }
         if (fileNameExists(name)) {
             throw new IllegalFileNameException("A file with such name is already presented!");
@@ -298,7 +330,8 @@ class DirectoryImpl implements Directory {
         }
 
         Directory toDirectory() {
-            return new DirectoryImpl(getDataBlock());
+            String name = getName().substring(1); // remove leading slash
+            return new DirectoryImpl(name, getDataBlock());
         }
 
         // The record is empty if and only if all the position bytes are zeros

@@ -2,14 +2,13 @@ package org.jetbrains.teamcity.hire.test.filesystem.impl;
 
 import java.io.IOException;
 import java.util.Objects;
-import javax.annotation.concurrent.NotThreadSafe;
-import org.jetbrains.teamcity.hire.test.exceptions.NotEnoughFreeSpaceException;
 import org.jetbrains.teamcity.hire.test.filesystem.api.File;
+import org.jetbrains.teamcity.hire.test.filesystem.api.RootDirectory;
+import org.jetbrains.teamcity.hire.test.filesystem.exceptions.NotEnoughFreeSpaceException;
 
 /**
  * File abstraction providing read/write data.
  */
-@NotThreadSafe
 class FileImpl implements File {
 
     private final DataBlock dataBlock;
@@ -39,7 +38,9 @@ class FileImpl implements File {
      */
     @Override
     public long getFileSize() throws IOException {
-        return dataBlock.getDataChainCapacity();
+        synchronized (RootDirectory.class) {
+            return dataBlock.getDataChainCapacity();
+        }
     }
 
     /**
@@ -72,7 +73,9 @@ class FileImpl implements File {
             throw new IllegalArgumentException("offset must be >= 0");
         }
         Objects.requireNonNull(destination, "destination must be not null");
-        dataBlock.read(offset, destination);
+        synchronized (RootDirectory.class) {
+            dataBlock.read(offset, destination);
+        }
     }
 
     /**
@@ -104,7 +107,9 @@ class FileImpl implements File {
             throw new IllegalArgumentException("offset must be >= 0");
         }
         Objects.requireNonNull(data, "data must be not null");
-        dataBlock.write(offset, data);
+        synchronized (RootDirectory.class) {
+            dataBlock.write(offset, data);
+        }
     }
 
 }

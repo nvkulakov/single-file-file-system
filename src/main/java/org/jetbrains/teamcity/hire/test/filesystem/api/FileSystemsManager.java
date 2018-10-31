@@ -2,12 +2,10 @@ package org.jetbrains.teamcity.hire.test.filesystem.api;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import javax.annotation.concurrent.NotThreadSafe;
 
 /**
  * Manages file system in a file creation, format and loading {@link RootDirectory} from properly formatted file.
  */
-@NotThreadSafe
 public interface FileSystemsManager {
 
     /**

@@ -2,7 +2,7 @@ package org.jetbrains.teamcity.hire.test.filesystem.impl;
 
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import org.jetbrains.teamcity.hire.test.exceptions.NotEnoughFreeSpaceException;
+import org.jetbrains.teamcity.hire.test.filesystem.exceptions.NotEnoughFreeSpaceException;
 
 class FreeBlock extends Block {
 
