@@ -33,6 +33,11 @@
       <version>5.3.2</version>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.maven.plugins</groupId>
+      <artifactId>maven-assembly-plugin</artifactId>
+      <version>3.1.0</version>
+    </dependency>
   </dependencies>
 
   <build>
@@ -48,6 +53,25 @@
             <version>1.1.1</version>
           </dependency>
         </dependencies>
+      </plugin>
+
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-assembly-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>create-distribution</id>
+            <phase>package</phase>
+            <goals>
+              <goal>single</goal>
+            </goals>
+            <configuration>
+              <descriptors>
+                <descriptor>assembly/sampleAssembly.xml</descriptor>
+              </descriptors>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
